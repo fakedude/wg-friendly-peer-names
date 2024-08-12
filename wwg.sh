@@ -15,7 +15,7 @@ function updatePeerFile() {
   local NEWPEERS=()
 
   # Loop config, extract peers, check peers file, add if not present
-  while read -r LINE ; do
+  while read -r LINE; do
     # Check if its a peer line
     if [[ $LINE == *"peer"* ]]; then
       # Isolate peer public key, cut peer: (hardcoded)
@@ -29,33 +29,35 @@ function updatePeerFile() {
         NEWPEERS+=("$PEERPK")
       fi
     fi
-  done <<< "$("$WGCOMMAND")"
+  done <<<"$("$WGCOMMAND")"
 
   for PEERPK in "${NEWPEERS[@]}"; do
     echo -n "Enter friendly name for peer "
-    tput setaf 7; tput bold
+    tput setaf 7
+    tput bold
     echo -n "$PEERPK"
-    tput setaf 9; tput sgr0
+    tput setaf 9
+    tput sgr0
     read -r -p " : " PEERNAME
 
     if [[ "$PEERNAME" == "" ]]; then
       PEERNAME="Unnamed peer"
     fi
 
-    echo "$PEERPK:$PEERNAME" >> "$PEERFILE"
+    echo "$PEERPK:$PEERNAME" >>"$PEERFILE"
   done
 }
 
 function showConfiguration() {
   # Determine if we are using rich (colorful) output or not
-  local RICHOUTPUT=1;
+  local RICHOUTPUT=1
 
   if [[ ! -t 1 ]]; then
     RICHOUTPUT=0
   fi
 
   # Run wg through script to preserve color coding
-  script --flush --quiet /dev/null --command "$WGCOMMAND" | while read -r LINE ; do
+  script --flush --quiet /dev/null --command "$WGCOMMAND" | while read -r LINE; do
     # Check if its a peer line
     if [[ $LINE == *"peer"* ]]; then
       # Isolate peer public key, cut peer: (incl colors) hardcoded, then cut until first ESC character
@@ -107,12 +109,14 @@ function echoLine() {
 if [[ $# -gt 0 ]]; then
   while getopts :u OPTION; do
     case ${OPTION} in
-      u)  updatePeerFile
-          exit
-          ;;
-      *)  echo "Invalid flag: ${OPTION}"
-          exit 1
-          ;;
+    u)
+      updatePeerFile
+      exit
+      ;;
+    *)
+      echo "Invalid flag: ${OPTION}"
+      exit 1
+      ;;
     esac
   done
 
