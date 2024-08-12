@@ -1,13 +1,11 @@
 #!/bin/bash
-PEERFILE=/etc/wireguard/peers
-WGCOMMAND=$(which wg)
+PEERFILE=/etc/amnezia/amneziawg/peers
+WGCOMMAND=$(which awg)
 
 # Make sure peer file exists
 if [[ ! -f "$PEERFILE" ]]; then
-  touch "$PEERFILE" 2>/dev/null
-
-  if [[ "$?" != "0" ]]; then
-    echo "Peer file $PEERFILE is not accesible by your user"
+  if ! touch "$PEERFILE" 2>/dev/null]]; then
+    echo "Peer file $PEERFILE is not accesible by $USER"
 
     exit 0
   fi
@@ -17,26 +15,26 @@ function updatePeerFile() {
   local NEWPEERS=()
 
   # Loop config, extract peers, check peers file, add if not present
-  while read LINE ; do
+  while read -r LINE ; do
     # Check if its a peer line
     if [[ $LINE == *"peer"* ]]; then
       # Isolate peer public key, cut peer: (hardcoded)
       PEERPK=$(printf '%s' "$LINE" | cut -c7-)
 
       # See if we can find peer in peers file
-      PEERCOUNT=$(grep $PEERPK "$PEERFILE" | wc -l)
+      PEERCOUNT=$(grep -c "$PEERPK" "$PEERFILE")
 
       if [[ $PEERCOUNT -eq 0 ]]; then
         # Peer not found in peers file, add for later processing
         NEWPEERS+=("$PEERPK")
       fi
     fi
-  done <<< $("$WGCOMMAND")
+  done <<< "$("$WGCOMMAND")"
 
   for PEERPK in "${NEWPEERS[@]}"; do
     echo -n "Enter friendly name for peer "
     tput setaf 7; tput bold
-    echo -n $PEERPK
+    echo -n "$PEERPK"
     tput setaf 9; tput sgr0
     read -r -p " : " PEERNAME
 
@@ -57,17 +55,17 @@ function showConfiguration() {
   fi
 
   # Run wg through script to preserve color coding
-  script --flush --quiet /dev/null --command "$WGCOMMAND" | while read LINE ; do 
+  script --flush --quiet /dev/null --command "$WGCOMMAND" | while read -r LINE ; do
     # Check if its a peer line
     if [[ $LINE == *"peer"* ]]; then
       # Isolate peer public key, cut peer: (incl colors) hardcoded, then cut until first ESC character
-      PEERPK=$(printf '%s' "$LINE" | cut -c25- | cut -d $(echo -e '\033') -f1)
+      PEERPK=$(printf '%s' "$LINE" | cut -c25- | cut -d "$(echo -e '\033')" -f1)
 
       # Output peer line
       echoLine "$LINE" $RICHOUTPUT 1
 
       # See if we can find peer in peers file
-      PEER=$(grep $PEERPK "$PEERFILE" | cut -d ':' -f2)
+      PEER=$(grep "$PEERPK" "$PEERFILE" | cut -d ':' -f2)
 
       # If we found a friendly name, print that
       if [[ "$PEER" != "" ]]; then
@@ -89,7 +87,8 @@ function showConfiguration() {
 # $1: text, $2 richoutput, $3 print linebreak
 function echoLine() {
   # Strip any newline characters
-  local OUTPUTLINE=$(printf '%s' "$1" | sed '$ s/\[\r\n]$//')
+  local OUTPUTLINE
+  OUTPUTLINE=$(printf '%s' "$1" | sed '$ s/\[\r\n]$//')
 
   # If not rich output, strip ANSI control codes
   if [[ $2 -eq 0 ]]; then
@@ -110,6 +109,9 @@ if [[ $# -gt 0 ]]; then
     case ${OPTION} in
       u)  updatePeerFile
           exit
+          ;;
+      *)  echo "Invalid flag: ${OPTION}"
+          exit 1
           ;;
     esac
   done
